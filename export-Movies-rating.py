@@ -19,9 +19,9 @@ def list_movies():
 
     u=[]
     #regex = re.compile(r'(\w+\s)+')
-    Regex = re.compile(r'.+[^ \(\d+\)]')
 
-    for x in os.listdir('E:\\Movies'):
+    Regex = re.compile(r'.+[^ \(\d+\)]')
+    for x in os.listdir(os.path.dirname(os.path.abspath(__file__))):
         z=Regex.search(x).group()
         u.append(z)
     identify_movies(u)
@@ -60,7 +60,7 @@ def write_csv(csv_rows):
     delimiter = ','
 
     # write csv using csv module
-    with open('movies.csv', "w", newline='') as f:
+    with open(os.path.join(os.path.dirname(os.path.abspath(__file__),'movies.csv'), "w", newline='')) as f:
         csvwriter = csv.writer(f, delimiter=delimiter, quoting=csv.QUOTE_MINIMAL)
         csvwriter.writerow(csv_fields)
         for row in csv_rows:
