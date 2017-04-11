@@ -3,7 +3,7 @@ import json,re
 """
 export-Movies-rating.py
 Mohamed Hamza
-Exports IMDB's informations for your movies to CSV file.
+Exports IMDB's information for your movies to CSV file.
 """
 
 # def list_movies():
