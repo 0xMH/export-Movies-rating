@@ -1,5 +1,12 @@
-import requests,os,csv
-import json,re
+from pprint import pprint
+
+import requests
+import os
+import csv
+import json
+import re
+from imdbpie import Imdb
+
 """
 export-Movies-rating.py
 Mohamed Hamza
@@ -29,60 +36,66 @@ Exports IMDB's information for your movies to CSV file.
 #     # print(u)
 #     return u
 
+
 def name_grabber(medialst):
-    '''Gets the Movie Name and Year from the filename and other meta
+    """Gets the Movie Name and Year from the filename and other meta
     data is removed.
     For Example:
-    >>> Doctor.Strange.2016.720p.BrRip.mkv [INPUT]
-    >>> Doctor Strange 2016 [RETURN]
+    - Doctor.Strange.2016.720p.BrRip.mkv [INPUT]
+    - Doctor Strange 2016 [RETURN]
     This function is made mostly from: https://github.com/RafayGhafoor/Subscene-Subtitle-Grabber
-    '''
-    nameslist = []
+    """
+
+    nameslist = {}
     for movies in medialst:
         yearRegex = re.compile(r'\d{4}')
         if yearRegex.search(movies):
 
             def get_year(filename):
-                    searchItems = yearRegex.search(filename)
-                    return searchItems.group()
+                    searchitems = yearRegex.search(filename)
+                    return searchitems.group()
 
             year = get_year(movies)
             # This is 2016 Movie --> This is | 2016 | Movie
             prev, found, removal = movies.partition(year)
             
             if prev[-1] == ' ':
-                nameslist.append(prev.lower())
+                nameslist[found] = prev.lower()
             else:
-                nameslist.append(prev.lower()[:-1])
+                nameslist[found] = prev.lower()[:-1]
 
-    print(nameslist)
-    nameslist = [i.strip(' ') for i in nameslist]
+    nameslist = {key: val.strip(' ') for key, val in nameslist.items()}
+    print('found these movies', nameslist)
     return nameslist
 
-def identify_movies (x):
-    ''' identifying the movies using omdbapi API '''
+def identify_movies (movies):
+    """ identifying the movies from IMDB """
+    imdb = Imdb()
 
-    url = "http://www.omdbapi.com/?t="
-    u=[]
-    for i in x:
-        add = url + i
-        u.append(add)
-    return u
+    ids = []
+    for key, val in movies.items():
+        for info in imdb.search_for_title(val):
+            if key == info.get('year') and val == info.get('title').lower():
+                ids.append(info.get('imdb_id'))
+            # if val == info.get('title'):
+            #     print(val)
+    return [imdb.get_title_by_id(id) for id in ids]
+"""
+info.title
+info.year
+info.rating
+info.certification
+info.runtime
+info.genres
+info.plot_outline
+"""
 
-def scrap_info(x):
-    ''' scrap movies' info'''
-    u=[]
-    for i in x:
-        response = requests.get(i)
-        python_dictionary_values = json.loads(response.text)
-        u.append(python_dictionary_values)
-    return u
 
 def csv_rows(x):
     ''' get CSV's rows'''
     csv_rows = []
     for i in x:
-        csv_rows .append([i.get(z) for z in ['Title','Year','imdbRating','Rated','Runtime','Genre','Plot']])
+        csv_rows.append([getattr(i, z) for z in ['title','year','rating','certification','runtime','genres','plot_outline']])
     write_csv(csv_rows)
 
 def write_csv(csv_rows):
@@ -103,7 +116,6 @@ def write_csv(csv_rows):
 if __name__ == "__main__":  # pragma: no cover
     movies_names = name_grabber(os.listdir(os.path.dirname(os.path.abspath(__file__))))
     identifies = identify_movies(movies_names)
-    info = scrap_info(identifies)
-    csv_rows(info)
+    csv_rows(identifies)
 
 
