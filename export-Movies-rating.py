@@ -3,12 +3,14 @@ import os
 import csv
 import re
 from imdbpie import Imdb
+import argparse
 
 """
 export-Movies-rating.py
 Mohamed Hamza
 Exports IMDB's information for your movies to CSV file.
 """
+__version__ = '1'
 
 # def list_movies():
 #     '''
@@ -62,7 +64,7 @@ def name_grabber(medialst):
                 nameslist.setdefault(year, []).append(name.lower()[:-1])
 
     nameslist = {key: [movie.strip(' ') for movie in val] for key, val in nameslist.items()}
-    print('found these movies', nameslist)
+    print('Found these movies', nameslist)
     return nameslist
 
 
@@ -76,8 +78,7 @@ def identify_movies (movies):
             for info in imdb.search_for_title(val):
                 if key == info.get('year') and val == info.get('title').lower():
                     ids.append(info.get('imdb_id'))
-                # if val == info.get('title'):
-            #     print(val)
+
     return [imdb.get_title_by_id(id) for id in ids]
 
 
@@ -85,9 +86,17 @@ def csv_rows(imdbobjs):
     """ get CSV's rows """
     csv_rows = []
     for i in imdbobjs:
-        csv_rows.append(
-            [getattr(i, z) for z in ['title','year','rating','certification','runtime','genres','plot_outline']])
+        temp = [getattr(i, z) for z in ['title', 'year', 'rating', 'certification', 'runtime', 'genres', 'plot_outline']]
+        # convert time form Seconds to H:M
+        temp[4] = _timehm(temp[4])
+        csv_rows.append(temp)
+
     write_csv(csv_rows)
+
+def _timehm(seconds):
+    m, s = divmod(seconds, 60)
+    h, m = divmod(m, 60)
+    return "{}h:{:0=2d}min".format(h, m)
 
 def write_csv(csv_rows):
     """write csv using csv module."""
@@ -97,7 +106,7 @@ def write_csv(csv_rows):
     delimiter = ','
 
     # write csv using csv module
-    with open(os.path.join(os.path.abspath(os.getcwd()), 'movies.csv'), "w", newline='') as f:
+    with open(os.path.join(os.path.abspath(path), 'movies.csv'), "w", newline='') as f:
         csvwriter = csv.writer(f, delimiter=delimiter, quoting=csv.QUOTE_MINIMAL)
         csvwriter.writerow(csv_fields)
         for row in csv_rows:
@@ -105,7 +114,24 @@ def write_csv(csv_rows):
 
 
 if __name__ == "__main__":  # pragma: no cover
-    movies_names = name_grabber(os.listdir(os.path.abspath(os.getcwd())))
+    parser = argparse.ArgumentParser(description='export Movies-rating to CSV')
+
+    parser.add_argument('d', metavar='DirPath', nargs='*', default=os.getcwd(),
+                        help="your movies Directory's PATH")
+
+    parser.add_argument(
+        '--version',
+        action='version', version=__version__,
+        help='Print program version and exit')
+
+    args = parser.parse_args()
+
+    if isinstance(args.d, list):
+        path = args.d[0]
+    else:
+        path = args.d
+
+    movies_names = name_grabber(os.listdir(os.path.abspath(path)))
     identifies = identify_movies(movies_names)
     csv_rows(identifies)
 
