@@ -1,9 +1,6 @@
-from pprint import pprint
-
-import requests
+#!/usr/bin/env python3
 import os
 import csv
-import json
 import re
 from imdbpie import Imdb
 
@@ -50,63 +47,57 @@ def name_grabber(medialst):
     for movies in medialst:
         yearRegex = re.compile(r'\d{4}')
         if yearRegex.search(movies):
-
             def get_year(filename):
                     searchitems = yearRegex.search(filename)
                     return searchitems.group()
 
             year = get_year(movies)
             # This is 2016 Movie --> This is | 2016 | Movie
-            prev, found, removal = movies.partition(year)
+            name, year, removal = movies.partition(year)
             
-            if prev[-1] == ' ':
-                nameslist[found] = prev.lower()
-            else:
-                nameslist[found] = prev.lower()[:-1]
+            if name[-1] == ' ':
+                nameslist.setdefault(year, []).append(name.lower())
 
-    nameslist = {key: val.strip(' ') for key, val in nameslist.items()}
+            else:
+                nameslist.setdefault(year, []).append(name.lower()[:-1])
+
+    nameslist = {key: [movie.strip(' ') for movie in val] for key, val in nameslist.items()}
     print('found these movies', nameslist)
     return nameslist
+
 
 def identify_movies (movies):
     """ identifying the movies from IMDB """
     imdb = Imdb()
 
     ids = []
-    for key, val in movies.items():
-        for info in imdb.search_for_title(val):
-            if key == info.get('year') and val == info.get('title').lower():
-                ids.append(info.get('imdb_id'))
-            # if val == info.get('title'):
+    for key, vals in movies.items():
+        for val in vals:
+            for info in imdb.search_for_title(val):
+                if key == info.get('year') and val == info.get('title').lower():
+                    ids.append(info.get('imdb_id'))
+                # if val == info.get('title'):
             #     print(val)
     return [imdb.get_title_by_id(id) for id in ids]
-"""
-info.title
-info.year
-info.rating
-info.certification
-info.runtime
-info.genres
-info.plot_outline
-"""
 
 
-def csv_rows(x):
-    ''' get CSV's rows'''
+def csv_rows(imdbobjs):
+    """ get CSV's rows """
     csv_rows = []
-    for i in x:
-        csv_rows.append([getattr(i, z) for z in ['title','year','rating','certification','runtime','genres','plot_outline']])
+    for i in imdbobjs:
+        csv_rows.append(
+            [getattr(i, z) for z in ['title','year','rating','certification','runtime','genres','plot_outline']])
     write_csv(csv_rows)
 
 def write_csv(csv_rows):
     """write csv using csv module."""
 
     # csv setting
-    csv_fields = ['Title', 'Year', 'imdbRating', 'Rated', 'Runtime','Genre','Plot']
+    csv_fields = ['Title', 'Year', 'imdbRating', 'Rated', 'Runtime', 'Genre', 'Plot']
     delimiter = ','
 
     # write csv using csv module
-    with open(os.path.join(os.path.dirname(os.path.abspath(__file__)),'movies.csv'), "w", newline='') as f:
+    with open(os.path.join(os.path.abspath(os.getcwd()), 'movies.csv'), "w", newline='') as f:
         csvwriter = csv.writer(f, delimiter=delimiter, quoting=csv.QUOTE_MINIMAL)
         csvwriter.writerow(csv_fields)
         for row in csv_rows:
@@ -114,7 +105,7 @@ def write_csv(csv_rows):
 
 
 if __name__ == "__main__":  # pragma: no cover
-    movies_names = name_grabber(os.listdir(os.path.dirname(os.path.abspath(__file__))))
+    movies_names = name_grabber(os.listdir(os.path.abspath(os.getcwd())))
     identifies = identify_movies(movies_names)
     csv_rows(identifies)
 
